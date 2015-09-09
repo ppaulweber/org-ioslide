@@ -46,7 +46,7 @@ If you want to install manually, just do as following:
 * Usage
 
 Just take a look of [[file:example/index.html]] and
-[[file:example/index.org]], which contains detailed examples & demo.
+[[https://raw.githubusercontent.com/coldnew/org-ioslide/master/example/index.org][example/index.org]], which contains detailed examples & demo.
 
 ** If Tired Of Memorize Magic Code...
 =ox-ioslide-helper.el= is also available to help you interactively inserting verbose properties/options/attributes into your slide file. 
