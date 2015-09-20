@@ -96,7 +96,7 @@ vertical slides."
   :options-alist
   '(
     ;; Overwrite the HTML_HEAD defined in ox-html.el
-    (:html-head "HTML_HEAD" nil "" newline)
+    (:html-head         "HTML_HEAD"         nil "" newline)
 
     ;; Configs that will be generated in slide_config.js
 
@@ -122,24 +122,53 @@ vertical slides."
     (:twitter           "TWITTER"           nil   nil   t)
     (:www               "WWW"               nil   nil   t)
     (:github            "GITHUB"            nil   nil   t)
-
+    
     ;; Other configs
 
     ;; Use MathJax, Default: true. False will remove MathJax from
     ;; current slide to save space (when exporting); True will
     ;; re-install it again.
-    (:use-mathjax       "USE_MATHJAX"       nil "true"  t)
+    (:use-mathjax       "USE_MATHJAX"       nil   "false"  t)
     ;; Google analytics: 'UA-XXXXXXXX-1
     (:analytics         "ANALYTICS"         nil   nil   t)
-    (:logo              "LOGO"              nil    ""   t)
-    (:icon              "ICON"              nil "images/emacs-icon.png" t)
+    (:logo              "LOGO"              nil   ""   t)
+    (:icon              "ICON"              nil   "images/emacs-icon.png" t)
     (:hlevel            "HLEVEL"            nil   nil   t)
-
+    
     ;; TODO: idea ?
     ;; Hide the default title slide
     ;; (:hide-title-slide  "HIDE_TITLE_SLIDE" nil    nil   t)
-    )
 
+    
+    ;; to customize the logo, title and overall slides
+    (:logo-slide
+     "LOGO_SLIDE"              nil   "true" t)
+    (:logo-slide-class
+     "LOGO_SLIDE_CLASS"        nil   "nobackground" t)
+    (:logo-slide-style
+     "LOGO_SLIDE_STYLE"        nil   "width: 120%; margin-left: -10%;" t)
+
+    (:title-slide
+     "TITLE_SLIDE"             nil   "true" t)
+    (:title-slide-class
+     "TITLE_SLIDE_CLASS"       nil   "segue nobackground" t)
+    (:title-slide-gdbar
+     "TITLE_SLIDE_GDBAR"       nil   "false" t)
+    (:title-slide-logo
+     "TITLE_SLIDE_LOGO"        nil   "true" t)
+    (:title-slide-logo-class
+     "TITLE_SLIDE_LOGO_CLASS"  nil   "" t) ;; example "auto-fadein"
+    (:title-slide-logo-style
+     "TITLE_SLIDE_LOGO_STYLE"  nil   "float: right; margin-right: -50px;" t)
+    
+    (:slide-logo
+     "SLIDE_LOGO"              nil   "true" t)
+    (:slide-logo-class
+     "SLIDE_LOGO_CLASS"        nil   "" t) ;; example "auto-fadein"
+    (:slide-logo-style
+     "SLIDE_LOGO_STYLE"        nil   "width: 200px; float: right; margin: -10px -25px 0 0;" t)
+    )
+  
   :translate-alist
   '((headline                   .       org-ioslide-headline)
     (section                    .       org-ioslide-section)
@@ -558,10 +587,20 @@ holding contextual information."
             (string-match "thank-you-slide" slide-prop))
         ""
       (format
-       "<hgroup class=\"%s\">
+       "%s
+       <hgroup class=\"%s\">
        <h2 class=\"%s\">%s</h2>
        <h3>%s</h3>
        </hgroup>\n"
+       ;; logo branding
+       (if (equal (plist-get info :slide-logo) "true")
+           (format
+            "<article class=\"%s\"><span><img style=\"%s\" src=\"%s\"></span></article>"
+              (plist-get info :slide-logo-class)
+              (plist-get info :slide-logo-style)
+              (plist-get info :logo)
+              )
+         (format ""))
        ;; class
        (or hgroup-class "")
        ;; headline text.
@@ -750,28 +789,44 @@ contextual information."
 
 (defun org-ioslide--build-logo-slide (info)
   (let ((logo-file (plist-get info :logo)))
-    (if (< 0 (string-width logo-file))
+    (if (equal (plist-get info :logo-slide) "true")
         (format
-         "<slide class=\"logoslide nobackground\">
+         "<slide class=\"logo-slide %s\">
                <article class=\"flexbox vcenter\">
-                 <span><img src=\"%s\"></span>
+                 <span><img style=\"%s\" src=\"%s\"></span>
                </article>
              </slide>\n"
-         logo-file))))
+         (plist-get info :logo-slide-class)
+         (plist-get info :logo-slide-style)
+         (plist-get info :logo)
+         )
+      )))
 
 (defun org-ioslide--build-title-slide (info)
   (format
-   "<slide class=\"title-slide segue nobackground\">
-       <aside class=\"gdbar\"><img src=\"%s\"></aside>
-       <!-- The content of this hgroup is replaced programmatically through the slide_config.json. -->
+   "<slide class=\"title-slide %s\">
+       %s
+       %s
        <hgroup class=\"auto-fadein\">
          <h1 data-config-title><!-- populated from slide_config.json --></h1>
          <h2 data-config-subtitle><!-- populated from slide_config.json --></h2>
          <p data-config-presenter><!-- populated from slide_config.json --></p>
        </hgroup>
     </slide>
-  "
-   (plist-get info :icon)))
+   "
+   (plist-get info :title-slide-class)
+   (if (equal (plist-get info :title-slide-logo) "true")
+     (format "<article class=\"%s\"><span><img style=\"%s\" src=\"%s\"></span></article>"
+             (plist-get info :title-slide-logo-class)
+             (plist-get info :title-slide-logo-style)
+             (plist-get info :logo)
+             )
+     (format ""))
+   (if (equal (plist-get info :title-slide-gdbar) "true")
+     (format "<aside class=\"gdbar\"><img src=\"%s\"></aside>" (plist-get info :icon))
+     (format ""))
+   )
+  )
 
 (defun org-ioslide--build-meta-info (info)
   "Return meta tags for exported document.
