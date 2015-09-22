@@ -113,7 +113,7 @@ vertical slides."
     ;; Note: the device must support touch.
     (:enable-touch      "ENABLE_TOUCH"      nil "true"  t)
     ;; favIcon
-    (:fav-icon          "FAVICON"           nil "images/emacs-icon.png" t)
+    (:fav-icon          "FAVICON"           nil "" t)
     (:hash-tag          "HASHTAG"           nil "" t)
     ;; TODO: fonts
     ;; Author information
@@ -132,7 +132,7 @@ vertical slides."
     ;; Google analytics: 'UA-XXXXXXXX-1
     (:analytics         "ANALYTICS"         nil   nil   t)
     (:logo              "LOGO"              nil   ""   t)
-    (:icon              "ICON"              nil   "images/emacs-icon.png" t)
+    (:icon              "ICON"              nil   "" t)
     (:hlevel            "HLEVEL"            nil   nil   t)
     
     ;; TODO: idea ?
@@ -141,6 +141,9 @@ vertical slides."
 
     
     ;; to customize the logo, title and overall slides
+    (:slide-css
+     "SLIDE_CSS"               nil   "theme/css/default.css" t)
+    
     (:logo-slide
      "LOGO_SLIDE"              nil   "true" t)
     (:logo-slide-class
@@ -168,6 +171,12 @@ vertical slides."
      "SLIDE_LOGO_CLASS"        nil   "" t) ;; example "auto-fadein"
     (:slide-logo-style
      "SLIDE_LOGO_STYLE"        nil   "position: absolute; right: 50px; top: 40px;" t)
+
+    (:thank-you-slide-gdbar
+     "THANK_YOU_SLIDE_GDBAR"   nil   "false" t)
+
+    (:segue-slide-gdbar
+     "SEGUE_SLIDE_GDBAR"   nil   "false" t)
     )
   
   :translate-alist
@@ -546,7 +555,7 @@ holding contextual information."
           (org-ioslide--container-class headline info)
           ;; body
           (format "%s%s%s"
-                  ;; aside
+                  ;; aside                  
                   (org-ioslide--aside headline info)
                   ;; title
                   (org-ioslide--title headline info)
@@ -619,17 +628,26 @@ holding contextual information."
 
 (defun org-ioslide--aside (headline info)
   (let* ((slide-class (format "%s" (org-element-property :SLIDE headline)))
-         (segue-p (or (string-match "segue" slide-class) nil)))
+         (segue-p (or (string-match "segue" slide-class) nil))
+         (thankyou-p (or (string-match "thank-you-slide" slide-class) nil))
+         )
     (if (< 0 (string-bytes slide-class))
         ;; icon
-        (if segue-p
-            (format
-             "<aside class=\"gdbar %s\"><img src=\"%s\"></aside>"
-             (or (org-element-property :ASIDE headline) "")
-             ;; get ICON from property, if not exist get ICON from info
-             (or (org-element-property :ICON headline)
-                 (plist-get info :icon) "")
-             ) "")
+        (if thankyou-p
+            (if (equal (plist-get info :thank-you-slide-gdbar) "true")
+                (format "<aside class=\"gdbar\"><img src=\"%s\"></aside>" (plist-get info :icon))
+              (format ""))
+          (if segue-p
+              (if (equal (plist-get info :segue-slide-gdbar) "true")
+                  (format
+                   "<aside class=\"gdbar %s\"><img src=\"%s\"></aside>"
+                   (or (org-element-property :ASIDE headline) "")
+                   ;; get ICON from property, if not exist get ICON from info
+                   (or (org-element-property :ICON headline)
+                       (plist-get info :icon) "")
+                   )
+                "")
+            ""))
       "")))
 
 (defun org-ioslide-section (section contents info)
@@ -914,7 +932,9 @@ INFO is a plist used as a communication channel."
                        info)
    "\n"
    (org-html-close-tag "link"
-                       "rel=\"stylesheet\" media=\"all\" href=\"theme/css/default.css\""
+                       (format "rel=\"stylesheet\" media=\"all\" href=\"%s\""
+                               (plist-get info :slide-css)
+                               )
                        info)
    "\n"
    (org-html-close-tag "link"
