@@ -159,14 +159,15 @@ vertical slides."
     (:title-slide-logo-class
      "TITLE_SLIDE_LOGO_CLASS"  nil   "" t) ;; example "auto-fadein"
     (:title-slide-logo-style
-     "TITLE_SLIDE_LOGO_STYLE"  nil   "float: right; margin-right: -50px;" t)
+     "TITLE_SLIDE_LOGO_STYLE"  nil   "position: absolute; right: 50px; top: 40px;" t)
+    ; "TITLE_SLIDE_LOGO_STYLE"  nil   "float: right; margin-right: -50px;" t)
     
     (:slide-logo
      "SLIDE_LOGO"              nil   "true" t)
     (:slide-logo-class
      "SLIDE_LOGO_CLASS"        nil   "" t) ;; example "auto-fadein"
     (:slide-logo-style
-     "SLIDE_LOGO_STYLE"        nil   "width: 200px; float: right; margin: -10px -25px 0 0;" t)
+     "SLIDE_LOGO_STYLE"        nil   "position: absolute; right: 50px; top: 40px;" t)
     )
   
   :translate-alist
@@ -197,7 +198,12 @@ vertical slides."
     (if (stringp r) r (or (car r) ""))))
 
 (defun org-ioslide-close-element (element attr body)
-  (format "<%s %s>\n%s\n</%s>" element attr body element))
+  (format "<%s %s>\n%s\n</%s>"
+          element
+          attr
+          body
+          element
+          ))
 
 (defun org-ioslide-close-element* (element attr body)
   "What is this?!"
@@ -532,8 +538,8 @@ holding contextual information."
          ;; FIXME: This will make slide has more </slide> element
          (if (or (/= level 1)
                  (not (org-export-first-sibling-p headline info)))
-             "</slide>\n")
-
+             "</slide>\n"
+           )
          (org-ioslide-close-element
           (org-ioslide--container headline info)
           ;; container class
@@ -595,11 +601,11 @@ holding contextual information."
        ;; logo branding
        (if (equal (plist-get info :slide-logo) "true")
            (format
-            "<article class=\"%s\"><span><img style=\"%s\" src=\"%s\"></span></article>"
-              (plist-get info :slide-logo-class)
-              (plist-get info :slide-logo-style)
-              (plist-get info :logo)
-              )
+            "<article class=\"%s\"><div><img style=\"%s\" src=\"%s\"></div></article>\n"
+            (plist-get info :slide-logo-class)
+            (plist-get info :slide-logo-style)
+            (plist-get info :logo)
+            )
          (format ""))
        ;; class
        (or hgroup-class "")
@@ -674,7 +680,7 @@ holding contextual information."
   (if org-ioslide--current-footnote-list
       (prog1 (concat
               "<footer class=\"source\">\n"
-              (mapconcat #'identity (reverse org-ioslide--current-footnote-list) "\n")
+              (mapconcat #'identity (reverse org-ioslide--current-footnote-list) "<br>\n")
               "\n</footer>")
         ;; clean list
         (setq org-ioslide--current-footnote-list nil))
@@ -698,9 +704,16 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
     (t
      (let ((def (org-export-get-footnote-definition footnote-reference info)))
        (push
-        (format "%s" (org-trim (org-export-data def info)))
-        org-ioslide--current-footnote-list)
-       ""
+        (format "<sup>%s</sup>%s"
+                (+ (length org-ioslide--current-footnote-list) 1)
+                (org-trim (org-export-data def info))
+                )
+        org-ioslide--current-footnote-list
+        )
+       (format "<sup>%s</sup>"
+               (length org-ioslide--current-footnote-list)
+               ;(nth 0 org-ioslide--current-footnote-list)
+               )
        )))))
 
 (defun org-ioslide-inner-template (contents info)
@@ -803,6 +816,7 @@ contextual information."
       )))
 
 (defun org-ioslide--build-title-slide (info)
+  (print (plist-get info :title))
   (format
    "<slide class=\"title-slide %s\">
        %s
@@ -810,13 +824,18 @@ contextual information."
        <hgroup class=\"auto-fadein\">
          <h1 data-config-title><!-- populated from slide_config.json --></h1>
          <h2 data-config-subtitle><!-- populated from slide_config.json --></h2>
-         <p data-config-presenter><!-- populated from slide_config.json --></p>
+         <p>
+         %s<br>
+         %s<br>
+         <br>
+         %s<br>
+         </p>
        </hgroup>
     </slide>
    "
    (plist-get info :title-slide-class)
    (if (equal (plist-get info :title-slide-logo) "true")
-     (format "<article class=\"%s\"><span><img style=\"%s\" src=\"%s\"></span></article>"
+     (format "<article class=\"%s\"><div><img style=\"%s\" src=\"%s\"></div></article>"
              (plist-get info :title-slide-logo-class)
              (plist-get info :title-slide-logo-style)
              (plist-get info :logo)
@@ -825,6 +844,9 @@ contextual information."
    (if (equal (plist-get info :title-slide-gdbar) "true")
      (format "<aside class=\"gdbar\"><img src=\"%s\"></aside>" (plist-get info :icon))
      (format ""))
+   (org-ioslide--plist-get-string info :author)
+   (org-ioslide--plist-get-string info :company)
+   (org-ioslide--plist-get-string info :date)
    )
   )
 
