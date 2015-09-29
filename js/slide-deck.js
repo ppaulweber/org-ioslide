@@ -423,11 +423,11 @@ SlideDeck.prototype.loadConfig_ = function(config) {
  * @param {Array.<string>} fonts
  */
 SlideDeck.prototype.addFonts_ = function(fonts) {
-  var el = document.createElement('link');
-  el.rel = 'stylesheet';
-  el.href = ('https:' == document.location.protocol ? 'https' : 'http') +
-      '://fonts.googleapis.com/css?family=' + fonts.join('|') + '&v2';
-  document.querySelector('head').appendChild(el);
+  // var el = document.createElement('link');
+  // el.rel = 'stylesheet';
+  // el.href = ('https:' == document.location.protocol ? 'https' : 'http') +
+  //     '://fonts.googleapis.com/css?family=' + fonts.join('|') + '&v2';
+  // document.querySelector('head').appendChild(el);
 };
 
 /**

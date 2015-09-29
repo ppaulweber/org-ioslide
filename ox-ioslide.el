@@ -62,7 +62,6 @@
   :tag "Org Export to Google I/O HTML5 slide"
   :group 'org-export)
 
-
 ;;; User Configuration Variables
 
 (defcustom org-ioslide-config-file
@@ -142,7 +141,7 @@ vertical slides."
     
     ;; to customize the logo, title and overall slides
     (:slide-css
-     "SLIDE_CSS"               nil   "theme/css/default.css" t)
+     "SLIDE_CSS"               nil   (format "%stheme/css/default.css" org-ioslide-path) t)
     
     (:logo-slide
      "LOGO_SLIDE"              nil   "true" t)
@@ -176,7 +175,11 @@ vertical slides."
      "THANK_YOU_SLIDE_GDBAR"   nil   "false" t)
 
     (:segue-slide-gdbar
-     "SEGUE_SLIDE_GDBAR"   nil   "false" t)
+     "SEGUE_SLIDE_GDBAR"       nil   "false" t)
+
+    (:resource
+     "resource"                nil   org-ioslide-path t)
+    
     )
   
   :translate-alist
@@ -200,7 +203,7 @@ vertical slides."
   )
 
 
-
+
 ;;; Internal Functions
 (defun org-ioslide--plist-get-string (info key)
   (let ((r (plist-get info key)))
@@ -218,25 +221,28 @@ vertical slides."
   "What is this?!"
   (format "</%s>\n%s\n<%s %s>\n" element body element attr))
 
-(defun org-ioslide--copy-resource ()
-  "Copy needed resource to current path."
-  ;; TODO: make user use their own template instead of force copy
-  ;; FIXME: do not copy image folder ?
-  (mapc (lambda (dir)
-          (copy-directory (f-join org-ioslide-path dir) dir))
-        '("js/" "images/" "theme/")))
+;; (defun org-ioslide--copy-resource ()
+;;   "Copy needed resource to current path."
+;;   ;; TODO: make user use their own template instead of force copy
+;;   ;; FIXME: do not copy image folder ?
+;;   (mapc (lambda (dir)
+;;           (copy-directory (f-join org-ioslide-path dir) dir))
+;;         '("js/" "images/" "theme/")))
 
 (defun org-ioslide-check-resource ()
   "Check js/slides.js exist or not, if not exist, re-fetch resource."
-  (if (not (file-exists-p "js/slides.js"))
-      (org-ioslide--copy-resource)))
+  (if (not (file-exists-p (format "%sjs/slides.js" org-ioslide-path)))
+      (error (concat "could not find file '" (format "%sjs/slides.js" org-ioslide-path) "'"))
+      ;(org-ioslide--copy-resource)
+    )
+  )
 
-(defun org-ioslide-generate-small-icon-css (icon-path hash-tag)
+(defun org-ioslide-generate-small-icon-css ( icon-path hash-tag)
   "Generate theme/css/small-icon.css to overwrite style.
 (The small icon at the left bottom corner)"
   (progn
     (save-excursion
-      (with-temp-file "theme/css/small-icon.css"
+      (with-temp-file (format "%stheme/css/small-icon.css" org-ioslide-path)
         (insert "slides > slide:not(.nobackground):before {
 background: url(../../" icon-path ") no-repeat 0 50%;
 font-size: 12pt;
@@ -589,9 +595,13 @@ holding contextual information."
      (if (or segue-p class fill-image)
          (format "class=\"%s %s %s\""
                  (if fill-image "fill" "") class "nobackground") "")
-     (if (or segue-p fill-image)
-         (format "style=\"background-image: url(%s)\"" fill-image) "")
-     )))
+
+     (if segue-p
+         (if fill-image
+             ""
+           (format "style=\"background-image: url(%s)\"" fill-image)
+           )
+       ))))
 
 (defun org-ioslide--title (headline info)
   (let* ((title (format "%s " (or (org-element-property :TITLE headline) "")))
@@ -938,18 +948,34 @@ INFO is a plist used as a communication channel."
                        info)
    "\n"
    (org-html-close-tag "link"
-                       "rel=\"stylesheet\" media=\"only screen and (max-device-width: 480px)\" href=\"theme/css/phone.css\""
+                       (format "rel=\"stylesheet\" media=\"only screen and (max-device-width: 480px)\" href=\"%stheme/css/phone.css\""
+                               org-ioslide-path
+                               )
                        info)
    "\n"
    (org-html-close-tag "link"
-                       "rel=\"stylesheet\" media=\"all\" href=\"theme/css/small-icon.css\""
+                       (format "rel=\"stylesheet\" media=\"all\" href=\"%stheme/css/small-icon.css\""
+                               org-ioslide-path
+                               )
                        info)
+   "\n"
+   (org-html-close-tag "link"
+                       (format "rel=\"stylesheet\" media=\"all\" href=\"%stheme/css/google_fonts.css\""
+                               org-ioslide-path
+                               )
+                       info)
+
+
+   
    ;; [FIXME: ugly workaround] Generate theme/css/small-icon.css.
    (org-ioslide-generate-small-icon-css (org-ioslide--plist-get-string info :fav-icon)
                                         (org-ioslide--plist-get-string info :hash-tag))
    "\n"
    "<base target=\"_blank\"> <!-- This amazingness opens all links in a new tab. -->\n"
-   "<script data-main=\"js/slides\" src=\"js/require-1.0.8.min.js\"></script>"
+   (format "<script data-main=\"%sjs/slides\" src=\"%sjs/require-1.0.8.min.js\"></script>"
+           org-ioslide-path
+           org-ioslide-path
+           )
    "\n"))
 
 (defun org-ioslide--build-head (info)
@@ -966,22 +992,22 @@ INFO is a plist used as a communication channel."
                                   (plist-get info :html-htmlized-css-url))
                           info)))))
 
-(defun org-ioslide--install-mathjax (info)
-  "If '#+USE_MATHJAX: true' is set (default), install MathJax and enable it.
-If '#+USE_MATHJAX: false' is set, remove MathJax directory to
-save disk space."
-  (if (string= "true" (org-ioslide--plist-get-string info :use-mathjax))
-      (progn
-        ;; Check if MathJax installed
-        (if (not (file-exists-p "js/mathjax"))
-            (copy-directory (concat org-ioslide-path "js/mathjax") "js/mathjax"))
-        "\n<script src=\"js/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML,local/local\" type=\"text/javascript\"></script>\n")
-    (progn
-      (if (file-exists-p "js/mathjax")
-          (delete-directory "js/mathjax" t))
-      "")
-    )
-  )
+;; (defun org-ioslide--install-mathjax (info)
+;;   "If '#+USE_MATHJAX: true' is set (default), install MathJax and enable it.
+;; If '#+USE_MATHJAX: false' is set, remove MathJax directory to
+;; save disk space."
+;;   (if (string= "true" (org-ioslide--plist-get-string info :use-mathjax))
+;;       (progn
+;;         ;; Check if MathJax installed
+;;         (if (not (file-exists-p "js/mathjax"))
+;;             (copy-directory (concat org-ioslide-path "js/mathjax") "js/mathjax"))
+;;         "\n<script src=\"js/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML,local/local\" type=\"text/javascript\"></script>\n")
+;;     (progn
+;;       (if (file-exists-p "js/mathjax")
+;;           (delete-directory "js/mathjax" t))
+;;       "")
+;;     )
+;;   )
 
 (defun org-ioslide-template (contents info)
   "Return complete document string after HTML conversion.
@@ -1007,12 +1033,16 @@ info is a plist holding export options."
    ;; html head
    (org-ioslide--build-head info)
 
-   "
-   <script src=\"js/jquery-1.7.1.min.js\" type=\"text/javascript\"></script>
-"
-
-   ;; MathJax
-   (org-ioslide--install-mathjax info)
+   (format "<script src=\"slide_config.js\" type=\"text/javascript\"></script>"
+           org-ioslide-path
+           )
+   
+   (format "<script src=\"%sjs/jquery-1.7.1.min.js\" type=\"text/javascript\"></script>"
+           org-ioslide-path
+           )
+   
+   ;; ;; MathJax
+   ;; (org-ioslide--install-mathjax info)
 
    "</head>
 <body style=\"opacity: 0\">
@@ -1032,15 +1062,15 @@ info is a plist holding export options."
    "<slide class=\"backdrop\"></slide>\n"
    "</slides> \n"
 
-   ;; Google Analytics
-   (org-ioslide-google-analytics info)
+;;    ;; Google Analytics
+;;    (org-ioslide-google-analytics info)
 
-   "<!--[if IE]>
-  <script src=\"http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js\"></script>
-  <script>CFInstall.check({mode: 'overlay'});</script>
-<![endif]-->
-"
-
+;;    "<!--[if IE]>
+;;   <script src=\"http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js\"></script>
+;;   <script>CFInstall.check({mode: 'overlay'});</script>
+;; <![endif]-->
+;; "
+   
    "</body> \n
 </html>\n"
    ))
