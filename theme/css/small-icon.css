@@ -1,7 +1,7 @@
 slides > slide:not(.nobackground):before {
-background: url(../../images/org-icon.png) no-repeat 0 50%;
+background: url(../../) no-repeat 0 50%;
 font-size: 12pt;
-content: "Hash tag is in here";
+content: "";
 position: absolute;
 bottom: 20px;
 left: 60px;
