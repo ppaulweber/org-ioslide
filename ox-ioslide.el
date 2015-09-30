@@ -149,7 +149,9 @@ vertical slides."
      "LOGO_SLIDE_CLASS"        nil   "nobackground" t)
     (:logo-slide-style
      "LOGO_SLIDE_STYLE"        nil   "width: 120%; margin-left: -10%;" t)
-
+    (:logo-slide-img
+     "LOGO_SLIDE_IMG"          nil   "false" t)
+    
     (:title-slide
      "TITLE_SLIDE"             nil   "true" t)
     (:title-slide-class
@@ -607,15 +609,19 @@ holding contextual information."
   (let* ((title (format "%s " (or (org-element-property :TITLE headline) "")))
          (slide-prop (format "%s" (org-element-property :SLIDE headline)))
          (title-class (replace-regexp-in-string "\\<hide\\>" "" title))
-         (hgroup-class (org-element-property :HGROUP headline)))
+         (hgroup-class (org-element-property :HGROUP headline))
+         (is-tys (string-match "thank-you-slide" slide-prop))
+         (h2s (if is-tys "3" "2"))
+         (h3s (if is-tys "4" "3"))
+         )
     (if (or (string-match "hide" title)
-            (string-match "thank-you-slide" slide-prop))
+            is-tys)
         ""
       (format
        "%s
        <hgroup class=\"%s\">
-       <h2 class=\"%s\">%s</h2>
-       <h3>%s</h3>
+       <h%s class=\"%s\">%s</h%s>
+       <h%s>%s</h%s>
        </hgroup>\n"
        ;; logo branding
        (if (equal (plist-get info :slide-logo) "true")
@@ -629,12 +635,18 @@ holding contextual information."
        ;; class
        (or hgroup-class "")
        ;; headline text.
+       h2s
        (or title-class "")
        (if (fboundp 'org-html-format-headline--wrap)
            (org-html-format-headline--wrap headline info)
          (org-html-headline headline "" info))
+       h2s
        ;; subtitle
-       (or (org-element-property :SUBTITLE headline) "")))))
+       h3s
+       (or (org-element-property :SUBTITLE headline) "")
+       h3s
+       ))))
+
 
 (defun org-ioslide--aside (headline info)
   (let* ((slide-class (format "%s" (org-element-property :SLIDE headline)))
@@ -832,14 +844,17 @@ contextual information."
   (let ((logo-file (plist-get info :logo)))
     (if (equal (plist-get info :logo-slide) "true")
         (format
-         "<slide class=\"logo-slide %s\">
+         "<slide class=\"logo-slide nobackground %s\">
                <article class=\"flexbox vcenter\">
                  <span><img style=\"%s\" src=\"%s\"></span>
                </article>
              </slide>\n"
          (plist-get info :logo-slide-class)
          (plist-get info :logo-slide-style)
-         (plist-get info :logo)
+         (if (equal (plist-get info :logo-slide-img) "false")
+             (plist-get info :logo)
+           (plist-get info :logo-slide-img)
+           )
          )
       )))
 
